@@ -42,11 +42,13 @@ describe("tui session actions", () => {
       chatLog: {
         addSystem: vi.fn(),
         addUser: vi.fn(),
+        updateAssistant: vi.fn(),
         finalizeAssistant: vi.fn(),
         clearPendingUsers: vi.fn(),
         clearAll: vi.fn(),
         reconcilePendingUsers: vi.fn().mockReturnValue([]),
         restorePendingUsers: vi.fn(),
+        resetStreamingAssistantState: vi.fn(),
       } as unknown as import("./components/chat-log.js").ChatLog,
       btw: createBtwPresenter(),
       tui: { requestRender: vi.fn() } as unknown as import("@earendil-works/pi-tui").TUI,
@@ -587,6 +589,7 @@ describe("tui session actions", () => {
       finalizeAssistant: vi.fn(),
       reconcilePendingUsers: vi.fn().mockReturnValue([]),
       restorePendingUsers: vi.fn(),
+      resetStreamingAssistantState: vi.fn(),
       updateAssistant,
       startTool: vi.fn(),
     } as unknown as import("./components/chat-log.js").ChatLog;
@@ -622,6 +625,7 @@ describe("tui session actions", () => {
       finalizeAssistant: vi.fn(),
       reconcilePendingUsers: vi.fn().mockReturnValue([]),
       restorePendingUsers: vi.fn(),
+      resetStreamingAssistantState: vi.fn(),
       updateAssistant,
       startTool: vi.fn(),
     } as unknown as import("./components/chat-log.js").ChatLog;
@@ -654,6 +658,7 @@ describe("tui session actions", () => {
       finalizeAssistant: vi.fn(),
       reconcilePendingUsers: vi.fn().mockReturnValue([]),
       restorePendingUsers: vi.fn(),
+      resetStreamingAssistantState: vi.fn(),
       updateAssistant,
       startTool: vi.fn(),
     } as unknown as import("./components/chat-log.js").ChatLog;
@@ -1283,11 +1288,13 @@ describe("tui session actions", () => {
     const chatLog = {
       addSystem: vi.fn(),
       addUser: vi.fn(),
+      updateAssistant: vi.fn(),
       finalizeAssistant: vi.fn(),
       clearAll: vi.fn(),
       clearPendingUsers: vi.fn(),
       reconcilePendingUsers: vi.fn().mockReturnValue([]),
       restorePendingUsers: vi.fn(),
+      resetStreamingAssistantState: vi.fn(),
     };
 
     const { loadHistory: runLoadHistory } = createTestSessionActions({
@@ -1306,6 +1313,49 @@ describe("tui session actions", () => {
     ]);
     expect(chatLog.restorePendingUsers).toHaveBeenCalledTimes(1);
     expect(result).toEqual({ loaded: true, inFlightRunId: null });
+  });
+
+  it("gives each replayed assistant turn its own runId so separate turns cannot collapse into one component (#onresume)", async () => {
+    // Two user/assistant turns with nothing (no tool call) between them. Before
+    // the fix, both updateAssistant() calls shared the same default runId, so
+    // the second call's setText() silently overwrote the first turn's component
+    // instead of rendering as its own row in its own chronological position.
+    const loadHistory = vi.fn().mockResolvedValue({
+      sessionId: "session-main",
+      messages: [
+        { role: "user", content: "first question" },
+        { role: "assistant", content: [{ type: "text", text: "first answer" }] },
+        { role: "user", content: "second question" },
+        { role: "assistant", content: [{ type: "text", text: "second answer" }] },
+      ],
+    });
+    const updateAssistant = vi.fn();
+    const chatLog = {
+      addSystem: vi.fn(),
+      addUser: vi.fn(),
+      updateAssistant,
+      finalizeAssistant: vi.fn(),
+      clearAll: vi.fn(),
+      clearPendingUsers: vi.fn(),
+      reconcilePendingUsers: vi.fn().mockReturnValue([]),
+      restorePendingUsers: vi.fn(),
+      resetStreamingAssistantState: vi.fn(),
+    };
+
+    const { loadHistory: runLoadHistory } = createTestSessionActions({
+      client: { listSessions: vi.fn(), loadHistory } as unknown as TuiBackend,
+      chatLog: chatLog as unknown as import("./components/chat-log.js").ChatLog,
+    });
+
+    await runLoadHistory();
+
+    expect(updateAssistant).toHaveBeenCalledTimes(2);
+    const [firstCall, secondCall] = updateAssistant.mock.calls;
+    expect(firstCall[0]).toBe("first answer");
+    expect(secondCall[0]).toBe("second answer");
+    expect(firstCall[1]).toBeTruthy();
+    expect(secondCall[1]).toBeTruthy();
+    expect(firstCall[1]).not.toBe(secondCall[1]);
   });
 
   it("replays a persisted bashExecution (`!`/`!!`) message as local-echo system lines", async () => {
@@ -1333,11 +1383,13 @@ describe("tui session actions", () => {
     const chatLog = {
       addSystem,
       addUser: vi.fn(),
+      updateAssistant: vi.fn(),
       finalizeAssistant: vi.fn(),
       clearAll: vi.fn(),
       clearPendingUsers: vi.fn(),
       reconcilePendingUsers: vi.fn().mockReturnValue([]),
       restorePendingUsers: vi.fn(),
+      resetStreamingAssistantState: vi.fn(),
     };
 
     const { loadHistory: runLoadHistory } = createTestSessionActions({
