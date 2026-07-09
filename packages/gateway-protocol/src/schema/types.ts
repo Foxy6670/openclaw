@@ -532,6 +532,7 @@ export type DeviceTokenRotateParams = SchemaType<"DeviceTokenRotateParams">;
 export type DeviceTokenRevokeParams = SchemaType<"DeviceTokenRevokeParams">;
 export type ChatAbortParams = SchemaType<"ChatAbortParams">;
 export type ChatInjectParams = SchemaType<"ChatInjectParams">;
+export type ChatInjectBashExecutionParams = SchemaType<"ChatInjectBashExecutionParams">;
 export type ChatEvent = SchemaType<"ChatEvent">;
 
 /** Gateway update and process lifecycle event payloads. */

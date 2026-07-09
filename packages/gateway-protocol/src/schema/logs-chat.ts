@@ -159,6 +159,23 @@ export const ChatInjectParamsSchema = Type.Object(
   { additionalProperties: false },
 );
 
+/** Persists a TUI-local `!`/`!!` shell command result into a chat transcript without an agent turn. */
+export const ChatInjectBashExecutionParamsSchema = Type.Object(
+  {
+    sessionKey: NonEmptyString,
+    agentId: Type.Optional(NonEmptyString),
+    command: NonEmptyString,
+    output: Type.String(),
+    exitCode: Type.Optional(Type.Integer()),
+    cancelled: Type.Optional(Type.Boolean()),
+    truncated: Type.Optional(Type.Boolean()),
+    fullOutputPath: Type.Optional(Type.String()),
+    // false/omitted (`!`): included in the model's context. true (`!!`): history-only.
+    excludeFromContext: Type.Optional(Type.Boolean()),
+  },
+  { additionalProperties: false },
+);
+
 /** Shared event fields preserve stream ordering and route events to the right session. */
 const ChatEventBaseSchema = {
   runId: NonEmptyString,

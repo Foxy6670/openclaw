@@ -330,6 +330,8 @@ export const CORE_GATEWAY_METHOD_SPECS: readonly CoreGatewayMethodSpec[] = [
   },
   { name: "approval.get", scope: "operator.approvals" },
   { name: "approval.resolve", scope: "operator.approvals" },
+  // Additive: persists a TUI-local `!`/`!!` shell command result, no agent turn.
+  { name: "chat.injectBashExecution", scope: "operator.admin", advertise: false },
 ] as const;
 
 const CORE_GATEWAY_METHOD_SPEC_BY_NAME: ReadonlyMap<string, CoreGatewayMethodSpec> = new Map(

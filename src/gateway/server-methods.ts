@@ -384,6 +384,7 @@ export const coreGatewayHandlers: GatewayRequestHandlers = {
       "chat.abort",
       "chat.send",
       "chat.inject",
+      "chat.injectBashExecution",
     ],
     loadHandlers: loadChatHandlers,
   }),
