@@ -15,6 +15,7 @@ type MockFn = ReturnType<typeof vi.fn>;
 type HandlerChatLog = {
   startTool: (...args: unknown[]) => void;
   updateToolResult: (...args: unknown[]) => void;
+  recordToolActivity: (...args: unknown[]) => void;
   addSystem: (...args: unknown[]) => void;
   addPendingSystem: (...args: unknown[]) => void;
   dismissPendingSystem: (...args: unknown[]) => void;
@@ -30,6 +31,7 @@ type HandlerTui = { requestRender: (...args: unknown[]) => void };
 type MockChatLog = {
   startTool: MockFn;
   updateToolResult: MockFn;
+  recordToolActivity: MockFn;
   addSystem: MockFn;
   addPendingSystem: MockFn;
   dismissPendingSystem: MockFn;
@@ -47,6 +49,7 @@ function createMockChatLog(): MockChatLog & HandlerChatLog {
   return {
     startTool: vi.fn(),
     updateToolResult: vi.fn(),
+    recordToolActivity: vi.fn(),
     addSystem: vi.fn(),
     addPendingSystem: vi.fn(),
     dismissPendingSystem: vi.fn(),
@@ -1125,7 +1128,7 @@ describe("tui-event-handlers: handleAgentEvent", () => {
     expect(tui.requestRender).not.toHaveBeenCalled();
   });
 
-  it("suppresses tool events when verbose is off", () => {
+  it("suppresses full tool cards when verbose is off but records a fuzzy activity summary", () => {
     const { chatLog, tui, handleAgentEvent } = createHandlersHarness({
       state: {
         activeChatRunId: "run-123",
@@ -1140,7 +1143,31 @@ describe("tui-event-handlers: handleAgentEvent", () => {
     });
 
     expect(chatLog.startTool).not.toHaveBeenCalled();
-    expect(tui.requestRender).not.toHaveBeenCalled();
+    expect(chatLog.recordToolActivity).toHaveBeenCalledWith("run-123", "session_status", "tc-off");
+    expect(tui.requestRender).toHaveBeenCalled();
+  });
+
+  it("does not record tool activity for non-start phases when verbose is off", () => {
+    const { chatLog, handleAgentEvent } = createHandlersHarness({
+      state: {
+        activeChatRunId: "run-123",
+        sessionInfo: { verboseLevel: "off" },
+      },
+    });
+
+    handleAgentEvent({
+      runId: "run-123",
+      stream: "tool",
+      data: {
+        phase: "result",
+        toolCallId: "tc-off",
+        name: "session_status",
+        result: { content: [{ type: "text", text: "secret" }] },
+      },
+    });
+
+    expect(chatLog.recordToolActivity).not.toHaveBeenCalled();
+    expect(chatLog.updateToolResult).not.toHaveBeenCalled();
   });
 
   it("omits tool output when verbose is on (non-full)", () => {
